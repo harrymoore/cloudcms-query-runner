@@ -195,47 +195,6 @@ function printNodes(type, nodes, duration) {
     }
 }
 
-function getNodesFromQuery(context, callback) {
-    info("getNodesFromQuery()");
-
-    var query = context.query;
-
-    context.branch.queryNodes(query, {
-        limit: -1
-        // }).each(function() {
-        //     var node = this;
-        //     util.enhanceNode(node);
-        //     nodes.push(node);
-    }).then(function () {
-        context.nodes = this.asArray();
-        callback(null, context);
-    });
-}
-
-function touchNodes(context, callback) {
-    info("touchNodes()");
-
-    var nodes = context.nodes;
-
-    async.eachSeries(nodes, function (node, cb) {
-        log.info("touching " + node._doc);
-
-        Chain(node).touch().then(function () {
-            cb();
-        });
-    }, function (err) {
-        if (err) {
-            log.error("Error loading forms: " + err);
-            callback(err);
-            return;
-        }
-
-        log.debug("loaded forms");
-        callback(null, context);
-        return;
-    });
-}
-
 function getOptions() {
     return [{
             name: 'help',
