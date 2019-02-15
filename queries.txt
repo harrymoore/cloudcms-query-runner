@@ -1,0 +1,48 @@
+            }).queryNodes({
+                title: { 
+                    "$regex": "^" + node.title.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + "$",
+                    "$options": "i"
+                },
+                _type: node._type
+
+
+        _qname: { 
+            "$in": qnames
+        }
+
+
+
+
+                    "$or": [
+                        {
+                            _type: ref.typeQName,
+                        },
+                        {
+                            _qname: ref.qname
+                        }
+                    ]
+
+
+
+
+                    "$or": [
+                        {
+                            _type: ref.typeQName,
+                            title: { 
+                                "$regex": "^" + ref.title.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + "$",
+                                "$options": "i"
+                            }                    
+                        },
+                        {
+                            _qname: ref.qname
+                        }
+                    ]
+
+
+
+                    _type: ref.typeQName,
+                    title: { 
+                        "$regex": "^" + ref.title.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + "$",
+                        "$options": "i"
+                    }
+

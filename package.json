@@ -1,0 +1,29 @@
+{
+    "name": "cloudcms-query-runner",
+    "version": "1.0.0",
+    "description": "Run various types of queries and searches in  Cloud CMS",
+    "bin": {
+        "cloudcms-util": "./bin/cloudcms-query-runner.js"
+    },
+    "keywords": [
+        "cloudcms",
+        "cloud cms",
+        "gitana"
+    ],
+    "repository": "harrymoore/cloudcms-query-runner",
+    "dependencies": {
+        "async": "^2.6.2",
+        "basic-logger": "^0.4.4",
+        "chalk": "^2.4.2",
+        "command-line-args": "5.0.1",
+        "command-line-usage": "4.1.0",
+        "gitana": "^1.0.288",
+        "prompt-sync": "^4.1.4",
+        "underscore": "^1.9.1",
+        "wrench": "*",
+        "write-json-file": "^2.3.0"
+    },
+    "optionalDependencies": {},
+    "devDependencies": {},
+    "private": false
+}

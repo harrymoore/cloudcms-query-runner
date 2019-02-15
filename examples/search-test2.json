@@ -1,0 +1,14 @@
+{
+    "filtered": {
+       "query": {
+          "query_string": {
+             "query": "twitter"
+          }
+       },
+       "filter": {
+          "type" : {
+             "value" : "my:article"
+          }
+       }
+    }
+ }
