@@ -20,21 +20,27 @@ const NS_PER_SEC = 1e9;
 function error(message) {
     log.error(chalk.red(message));
 }
+
 function warn(message) {
     log.warn(chalk.yellow(message));
 }
+
 function info(message) {
     log.info(chalk.cyan(message));
 }
+
 function message(message) {
     log.info(chalk.green(message));
 }
+
 function text(message) {
     log.info(message);
 }
+
 function debug(message) {
     log.debug(chalk.white(message));
 }
+
 function trace(message) {
     log.trace(message);
 }
@@ -64,15 +70,13 @@ var option_filePath = options["query-file-path"];
 var option_query = options["query"];
 var option_search = options["search"];
 var option_traverse = options["traverse"];
+var option_printResults = options["print-results"];
 var option_find = options["find"];
 var option_tree = options["tree"];
 var option_nodeId = options["node-id"];
-
-var option_sort = options["sort"];
+var option_sortFilePath = options["sort-file-path"];
 var option_skip = options["skip"];
 var option_limit = options["limit"];
-var option_full = options["full"];
-var option_metadata = options["metadata"];
 
 //
 // load gitana.json config and override credentials
@@ -112,8 +116,21 @@ if (!fs.existsSync(option_filePath)) {
 var query = require(option_filePath);
 if (!_.isObject(query)) {
     error("Not a valid query in file " + option_filePath);
-    printHelp(getOptions());
     return;
+}
+
+var sort = {};
+if (option_sortFilePath) {
+    if (!fs.existsSync(option_sortFilePath)) {
+        error("Sort file path not found at " + option_sortFilePath);
+        return;
+    }
+
+    sort = require(option_sortFilePath);
+    if (!_.isObject(sort)) {
+        error("Not a valid sort in file " + option_sortFilePath);
+        return;
+    }
 }
 
 util.getBranch(gitanaConfig, option_branchId, function (err, branch, platform, stack, domain, primaryDomain, project) {
@@ -122,36 +139,32 @@ util.getBranch(gitanaConfig, option_branchId, function (err, branch, platform, s
         return;
     }
 
-    log.info("connected to project: \"" + chalk.cyan(project.title) + "\" and branch: \"" + chalk.cyan(branch.title || branch._doc) + "\".");
+    log.info("connected to project: \"" + chalk.yellow(project.title) + "\" and branch: \"" + chalk.yellow(branch.title || branch._doc) + "\".");
 
-    var queryStartTime = process.hrtime();
     var queryDuration = 0;
+    var queryStartTime = process.hrtime();
 
     if (option_query) {
-        error(chalk.yellow("Query"));
-        branch.trap(function(err){
-            error(chalk.red(err));          
+        branch.trap(function (err) {
+            error(chalk.red(err));
         }).queryNodes(query, {
             limit: option_limit || 100,
-            sort: {
-                title: 1,
-                "_system.modified_on.mm": -1
-            }
+            sort: sort
+        }, {
+            paths: true
         }).then(function () {
             queryDuration = process.hrtime(queryStartTime);
-            info("Completed in " + durationSeconds(queryDuration) + " seconds");
-
             var nodes = this.asArray();
-            showNodes(nodes);
+            printNodes("Query", nodes, queryDuration);
         });
     } else if (option_search) {
-        error(chalk.yellow("Search"));
+        info("Search");
     } else if (option_traverse) {
-        error(chalk.yellow("Traverse"));
+        info("Traverse");
     } else if (option_find) {
-        error(chalk.yellow("Find"));
+        info("Find");
     } else if (option_tree) {
-        error(chalk.yellow("Tree"));
+        info("Tree");
     } else {
         printHelp(getOptions());
     }
@@ -163,10 +176,23 @@ function durationSeconds(duration) {
     return (duration[0] * NS_PER_SEC + duration[1]) / NS_PER_SEC;
 }
 
-function showNodes(nodes) {
+function printNodes(type, nodes, duration) {
     debug("showNodes()");
 
-    text(JSON.stringify(nodes, null, 4));
+    if (duration) {
+        info(type + " completed in " + durationSeconds(duration) + " seconds");
+    }
+
+    info("Node count " + nodes.length || "?");
+
+    if (option_printResults) {
+        nodes = _.map(nodes, function (node) {
+            util.enhanceNode(node);
+            return (node);
+        });
+
+        text(JSON.stringify(nodes, null, 4));
+    }
 }
 
 function getNodesFromQuery(context, callback) {
@@ -290,6 +316,11 @@ function getOptions() {
             description: 'Run a tree'
         },
         {
+            name: 'print-results',
+            type: Boolean,
+            description: 'print query results'
+        },
+        {
             name: 'limit',
             type: String,
             description: 'limit'
@@ -300,29 +331,14 @@ function getOptions() {
             description: 'skip'
         },
         {
-            name: 'sort',
+            name: 'sort-file-path',
             type: String,
-            description: 'sort'
+            description: 'path to a json file defining the sort'
         },
         {
             name: 'fields',
             type: String,
             description: 'fields'
-        },
-        {
-            name: 'full',
-            type: Boolean,
-            description: 'full'
-        },
-        {
-            name: 'metadata',
-            type: Boolean,
-            description: 'metadata'
-        },
-        {
-            name: 'paths',
-            type: Boolean,
-            description: 'paths'
         }
     ];
 }
@@ -359,8 +375,7 @@ function printHelp(optionsList) {
         },
         {
             header: 'Examples',
-            content: [
-                {
+            content: [{
                     desc: '1. Query for nodes using POST to /repositories/{repositoryId}/branches/{branchId}/nodes/query',
                 },
                 {
@@ -408,7 +423,7 @@ function printHelp(optionsList) {
                                   ... Traversal configuration
                                }
                             }`,
-                   
+
                 },
                 {
                     desc: './cloudcms-query.js --find --query-file-path ./examples/find-test1.json'

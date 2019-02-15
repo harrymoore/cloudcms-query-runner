@@ -1,13 +1,3 @@
 {
-    "$or": [
-        {
-            "_type": "d:association"
-        },
-        {
-            "_type": "d:feature"
-        },
-        {
-            "_type": "d:type"
-        }
-    ]
+    "_type": "n:node"
 }
