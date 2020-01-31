@@ -70,6 +70,8 @@ var option_filePath = options["query-file-path"];
 var option_query = options["query"];
 var option_search = options["search"];
 var option_traverse = options["traverse"];
+var option_graphql = options["graphql"];
+var option_graphqlSchema = options["graphql-schema"];
 var option_printResults = options["print-results"];
 var option_find = options["find"];
 var option_tree = options["tree"];
@@ -103,22 +105,34 @@ if (option_password) {
     gitanaConfig.password = option_password;
 }
 
-if (!option_query && !option_search && !option_traverse && !option_find && !option_tree) {
-    error("You must specify a query type with one of: --query --search --traverse --find or --tree");
+if (!option_query 
+    && !option_search 
+    && !option_traverse 
+    && !option_find 
+    && !option_tree 
+    && !option_graphql
+    && !option_graphqlSchema) {
+    error("You must specify a query type with one of: --query, --search, --traverse, --find, --tree, --graphql, --graphql-schema");
     return;
 }
 
-if (!fs.existsSync(option_filePath)) {
+if (!fs.existsSync(option_filePath) && !option_graphqlSchema) {
     error("You must specify a query file using --query-file-path");
     return;
 }
 
-var query = require(option_filePath);
-if (!_.isObject(query)) {
-    error("Not a valid query in file " + option_filePath);
-    return;
+var query;
+if (option_graphqlSchema) {
+    // no query needed
+} else if (option_graphql) {
+    query = fs.readFileSync(option_filePath, 'utf8'); 
+} else {
+    query = require(option_filePath);
+    if (!_.isObject(query)) {
+        error("Not a valid query in file " + option_filePath);
+        return;
+    }
 }
-
 var sort = {};
 if (option_sortFilePath) {
     if (!fs.existsSync(option_sortFilePath)) {
@@ -145,10 +159,12 @@ util.getBranch(gitanaConfig, option_branchId, function (err, branch, platform, s
     var queryStartTime = process.hrtime();
 
     if (option_query) {
+        info("Query");
         branch.trap(function (err) {
-            error(chalk.red(err));
+            error(err);
         }).queryNodes(query, {
             limit: option_limit || 100,
+            skip: option_skip,
             sort: sort
         }, {
             paths: true
@@ -157,15 +173,82 @@ util.getBranch(gitanaConfig, option_branchId, function (err, branch, platform, s
             var nodes = this.asArray();
             printNodes("Query", nodes, queryDuration);
         });
-    } else if (option_search) {
+    } 
+    else if (option_search) {
         info("Search");
-    } else if (option_traverse) {
+        branch.trap(function (err) {
+            error(err);
+        }).searchNodes({
+            "filtered": {
+               "query": {
+                  "query_string": {
+                     "query": "twitter"
+                  }
+               },
+               "filter": {
+                  "type" : {
+                     "value" : "my:article"
+                  }
+               }
+            }
+         }).then(function () {
+            queryDuration = process.hrtime(queryStartTime);
+            var nodes = this.asArray();
+            printNodes("Search", nodes, queryDuration);
+        });
+    } 
+    else if (option_traverse) {
         info("Traverse");
-    } else if (option_find) {
+        branch.trap(function (err) {
+            error(err);
+        }).readNode(option_nodeId).traverse(query).then(function () {
+            queryDuration = process.hrtime(queryStartTime);
+            var nodes = this.asArray();
+            printNodes("Traverse", nodes, queryDuration);
+        });
+    } 
+    else if (option_find) {
         info("Find");
-    } else if (option_tree) {
+        branch.trap(function (err) {
+            error(err);
+        }).find(query).then(function () {
+            queryDuration = process.hrtime(queryStartTime);
+            var nodes = this.asArray();
+            printNodes("Find", nodes, queryDuration);
+        });
+    } 
+    else if (option_tree) {
         info("Tree");
-    } else {
+        branch.trap(function (err) {
+            error(err);
+        }).rootNode().loadTree(query, function (tree) {
+            queryDuration = process.hrtime(queryStartTime);
+            printNodeTree("Tree", tree, queryDuration);
+        });
+    } 
+    else if (option_graphql) {
+        info("graphqlQuery");
+
+        var operationName = "";
+        var variables = null;
+
+        // Gitana.PREFER_GET_OVER_POST = false;
+
+        branch.trap(function (err) {
+            error(err);
+        }).graphqlQuery(query, operationName, variables, function (result) {
+            queryDuration = process.hrtime(queryStartTime);
+            printObjectResponse("graphql", result, queryDuration);
+        });
+    } 
+    else if (option_graphqlSchema) {
+        info("graphql-schema");
+        branch.graphqlSchema(function (schemaText) {
+            queryDuration = process.hrtime(queryStartTime);
+            printGraphqlResult("graphql-schema", schemaText, queryDuration);
+        });
+    }
+    else {
         printHelp(getOptions());
     }
 
@@ -192,6 +275,41 @@ function printNodes(type, nodes, duration) {
         });
 
         text(JSON.stringify(nodes, null, 4));
+    }
+}
+function printGraphqlResult(type, schema, duration) {
+    debug("showNodes()");
+
+    if (duration) {
+        info(type + " completed in " + durationSeconds(duration) + " seconds");
+    }
+
+    text("\n" + schema);
+}
+
+function printObjectResponse(type, response, duration) {
+    debug("showNodes()");
+
+    if (duration) {
+        info(type + " completed in " + durationSeconds(duration) + " seconds");
+    }
+
+    if (option_printResults) {
+        text(JSON.stringify(response, null, 2));
+    }
+}
+
+function printNodeTree(type, nodeTree, duration) {
+    debug("showNodes()");
+
+    if (duration) {
+        info(type + " completed in " + durationSeconds(duration) + " seconds");
+    }
+
+    info("Node count " + nodeTree.length || "?");
+
+    if (option_printResults) {
+        text(JSON.stringify(nodeTree, null, 4));
     }
 }
 
@@ -275,6 +393,16 @@ function getOptions() {
             description: 'Run a tree'
         },
         {
+            name: 'graphql',
+            type: Boolean,
+            description: 'Run a graphql query'
+        },
+        {
+            name: 'graphql-schema',
+            type: Boolean,
+            description: 'Run graphql/schema to fetch content model schema'
+        },
+        {
             name: 'print-results',
             type: Boolean,
             description: 'print query results'
@@ -298,6 +426,11 @@ function getOptions() {
             name: 'fields',
             type: String,
             description: 'fields'
+        },
+        {
+            name: 'node-id',
+            type: String,
+            description: 'node id'
         }
     ];
 }
@@ -317,7 +450,7 @@ function handleOptions() {
 function printHelp(optionsList) {
     console.log(commandLineUsage([{
             header: 'Cloud CMS Query Runner',
-            content: 'Exercise various methods of finding nodes a Cloud CMS repository branch.'
+            content: 'Exercise various methods of searching for nodes in a Cloud CMS repository branch.'
         },
         {
             content: 'gitana credentials files can be referenced by path. This allows you to keep a library of credentials files and reference them when running this script using --gitana-file-path.'

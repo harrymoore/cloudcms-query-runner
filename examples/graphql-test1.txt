@@ -1,0 +1,12 @@
+ {
+    cna_showcases (q: "{title: 'test'}") {
+        _doc
+        title
+        sequence
+        summary
+        isActive
+        image {
+            _doc
+        }
+    }
+}

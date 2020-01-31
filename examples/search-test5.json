@@ -1,0 +1,5 @@
+{
+   "search": {
+       "query" : "(title:hello OR body:hello) AND (__type:\"demo:hero\")"
+   }
+}

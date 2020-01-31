@@ -2,3 +2,6 @@ gitana.json
 gitana-*.json
 *-gitana.json
 gitana/
+.vscode
+node_modules
+.DS_Store

@@ -1,3 +1,7 @@
 {
-    "_type": "n:node"
+    "search": {
+        "query_string" : {
+            "query" : "hello"
+        }
+    }
 }

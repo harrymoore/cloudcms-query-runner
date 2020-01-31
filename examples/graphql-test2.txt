@@ -1,0 +1,5 @@
+ {
+    demo_courses(_doc: "fc17447099b7164efa7b") {
+        _doc  
+    }
+}

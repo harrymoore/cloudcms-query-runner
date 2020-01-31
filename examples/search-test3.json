@@ -1,0 +1,6 @@
+{
+   "search": {
+      "fields": ["title", "body"],
+      "query": "hello"
+   }
+}
