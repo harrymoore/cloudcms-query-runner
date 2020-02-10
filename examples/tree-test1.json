@@ -1,4 +1,5 @@
 {
-    "basePath": "/folder1",
-    "containers": true
+    "basePath": "/",
+    "containers": true ,
+    "depth": 3
 }

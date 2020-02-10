@@ -225,7 +225,7 @@ util.getBranch(gitanaConfig, option_branchId, function (err, branch, platform, s
             queryDuration = process.hrtime(queryStartTime);
             printNodeTree("Tree", tree, queryDuration);
         });
-    } 
+    }
     else if (option_graphql) {
         info("graphqlQuery");
 

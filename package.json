@@ -1,6 +1,6 @@
 {
     "name": "cloudcms-query-runner",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "description": "Run various types of queries and searches in  Cloud CMS",
     "bin": {
         "cloudcms-util": "./bin/cloudcms-query-runner.js"

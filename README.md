@@ -19,6 +19,7 @@ It is not necessary to install cloudcms-query-runner. It runs as an npx script. 
     npx cloudcms-query-runner -g ./path/to/project-x-gitana.json --query --query-file-path ./query-files/query-test-1.json
 
 # Examples
+
 ## Query for nodes by type.
     Create file test1.json with this content:
     `{
@@ -27,3 +28,12 @@ It is not necessary to install cloudcms-query-runner. It runs as an npx script. 
 
     `npx cloudcms-query-runner -g ./path/to/project-x-gitana.json --query --query-file-path ./test1.json`
 
+## Show directory tree.
+    Create file print-tree.json with this content:
+    `{
+        "basePath": "/",
+        "containers": true ,
+        "depth": 3
+    }`
+
+    `npx cloudcms-query-runner -g ./gitana.json --tree --query-file-path ./print-tree.json`
