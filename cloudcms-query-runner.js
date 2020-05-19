@@ -70,10 +70,11 @@ var option_filePath = options["query-file-path"];
 var option_query = options["query"];
 var option_search = options["search"];
 var option_traverse = options["traverse"];
+var option_nodeFind = options["node-find"];
+var option_branchFind = options["branch-find"];
 var option_graphql = options["graphql"];
 var option_graphqlSchema = options["graphql-schema"];
 var option_printResults = options["print-results"];
-var option_find = options["find"];
 var option_tree = options["tree"];
 var option_nodeId = options["node-id"];
 var option_sortFilePath = options["sort-file-path"];
@@ -108,11 +109,19 @@ if (option_password) {
 if (!option_query 
     && !option_search 
     && !option_traverse 
-    && !option_find 
+    && !option_nodeFind 
+    && !option_branchFind 
     && !option_tree 
     && !option_graphql
     && !option_graphqlSchema) {
     error("You must specify a query type with one of: --query, --search, --traverse, --find, --tree, --graphql, --graphql-schema");
+    return;
+}
+
+if (!option_nodeId 
+    && (option_traverse
+     || option_nodeFind)) {
+        error("You must specify --node-id with --traverse or --node-find");
     return;
 }
 
@@ -132,7 +141,14 @@ if (option_graphqlSchema) {
         error("Not a valid query in file " + option_filePath);
         return;
     }
+
+    log.info("Query: " + chalk.blue(JSON.stringify(query, null, 2)));    
 }
+
+if (option_nodeId) {
+    log.info("Node id: " + chalk.blue(option_nodeId));    
+}
+
 var sort = {};
 if (option_sortFilePath) {
     if (!fs.existsSync(option_sortFilePath)) {
@@ -207,11 +223,71 @@ util.getBranch(gitanaConfig, option_branchId, function (err, branch, platform, s
             printNodes("Traverse", nodes, queryDuration);
         });
     } 
-    else if (option_find) {
-        info("Find");
+    else if (option_nodeFind) {
+        info("Node Find");
+
+        // * Performs a FIND for documents under the given branch that are around a given node.
+        // *
+        // * A find is a combination of one or more of the following:
+        // *
+        // *   Query
+        // *   Search
+        // *   Traversal
+        // *
+        // * A find produces a record set that is constrained by one or more of the three from the list
+        // * above.  In essence, it is a query whose record sets consists only of those records with
+        // * matching search terms and which sit in the given traversal space around the node.
+        // *
+        // * The incoming search JSON payload should look like:
+        // *
+        // *    {
+        // *       "query": {
+        // *          ... Gitana Query (Mongo)
+        // *       },
+        // *       "search": {
+        // *          ... Elastic Search Query Block
+        // *       },
+        // *       "traverse": {
+        // *          ... Traversal configuration
+        // *       }
+        // *    }
+        // *
+        // * Only one of the three need be present but if all three are present, all will be employed.
+   
         branch.trap(function (err) {
             error(err);
-        }).find(query).then(function () {
+        }).readNode(option_nodeId).find(query, {paths: true}).then(function () {
+            queryDuration = process.hrtime(queryStartTime);
+            var nodes = this.asArray();
+            printNodes("Find", nodes, queryDuration);
+        });
+    } 
+    else if (option_branchFind) {
+        info("Branch Find");
+        
+        // * Performs a FIND for documents under the given branch.
+        // *
+        // * A find is a combination of one or more of the following:
+        // *
+        // *   Query
+        // *   Search
+        // *
+        // * The incoming search JSON payload should look like:
+        // *
+        // *    {
+        // *       "query": {
+        // *          ... Gitana Query (Mongo)
+        // *       },
+        // *       "search": {
+        // *          ... Elastic Search Query Block
+        // *       }
+        // *    }
+        // *
+        // * Only one of the three need be present but if all three are present, all will be employed.
+   
+        branch.trap(function (err) {
+            error(err);
+        }).find(query, {paths: true, _fields:{title:1}}).then(function () {
             queryDuration = process.hrtime(queryStartTime);
             var nodes = this.asArray();
             printNodes("Find", nodes, queryDuration);
@@ -378,9 +454,14 @@ function getOptions() {
             description: 'Run a search'
         },
         {
-            name: 'find',
+            name: 'node-find',
             type: Boolean,
-            description: 'Run a find'
+            description: 'Run a find from a node'
+        },
+        {
+            name: 'branch-find',
+            type: Boolean,
+            description: 'Run a find against a branch'
         },
         {
             name: 'traverse',

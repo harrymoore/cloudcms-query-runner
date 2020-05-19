@@ -1,10 +1,5 @@
 {
-    "basePath": "/folder1",
-    "containers": true
-}
-
-{
     "_type": "a:child",
     "source":"81f085232c25be1eb559",
     "_features.f:publishable.state":"live"
-    }
+}

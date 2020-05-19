@@ -1,3 +1,5 @@
 {
-    "_type": "n:node"
+    "query": {
+        "_type": "demo:hero"
+    }
 }
